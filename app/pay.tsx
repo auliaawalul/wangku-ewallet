@@ -1,18 +1,18 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  TextInput,
-} from "react-native";
 import { router } from "expo-router";
 import { collection, doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { auth, db } from "../firebase/firebaseConfig";
 import { getDigitalProducts } from "../services/productApi";
 import { DigitalProduct, UserProfile } from "../types";
@@ -27,11 +27,12 @@ export default function PayScreen() {
   const [pin, setPin] = useState("");
   const [paying, setPaying] = useState(false);
 
-  const fetchProducts = async () => {
+ const fetchProducts = async () => {
     try {
       setLoading(true);
       setError("");
-      const data = await getDigitalProducts();
+      // TAMBAHKAN 'as any' di ujung fungsi getDigitalProducts() seperti di bawah ini:
+      const data = await getDigitalProducts() as any; 
       setProducts(data.slice(0, 10));
     } catch (err) {
       setError("Data produk digital gagal dimuat. Periksa koneksi internet atau URL API.");

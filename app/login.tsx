@@ -1,21 +1,30 @@
+import { router } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
+
+const { width } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -26,6 +35,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password);
+      setIsSheetVisible(false);
       router.replace("/");
     } catch (error: any) {
       Alert.alert(
@@ -41,49 +51,117 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.logoBox}>
-        <Text style={styles.logo}>P</Text>
+      <View style={styles.responsiveWrapper}>
+        
+        {/* 1. BANNER WARNING */}
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningTitle}>⚠️ Waspada Penipuan</Text>
+          <Text style={styles.warningText}>
+            Jangan berikan data pribadi seperti OTP, PIN, dan Password kepada siapapun termasuk pihak WangKu.
+          </Text>
+        </View>
+
+        {/* 2. AREA UTAMA LOGO & BRANDING */}
+        <View style={styles.centerContent}>
+          <Image 
+            source={require("../assets/images/logo.png")} 
+            style={styles.logoImageReal} 
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>
+            Wang<Text style={styles.titleAccent}>ku</Text>
+          </Text>
+          <Text style={styles.subtitle}>Kelola Uang, Raih Masa Depan.</Text>
+        </View>
+
+        {/* 3. TOMBOL UTAMA (PRODUK DIGITAL SUDAH DIHAPUS) */}
+        <View style={styles.actionArea}>
+          <TouchableOpacity 
+            style={styles.openSheetButton} 
+            onPress={() => setIsSheetVisible(true)}
+          >
+            <Text style={styles.openSheetButtonText}>Login</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* FOOTER */}
+        <Text style={styles.versionText}>Versi 2.1.0</Text>
       </View>
-      <Text style={styles.title}>Masuk ke WangKu</Text>
-      <Text style={styles.subtitle}>Kelola saldo dan transaksi dalam satu aplikasi</Text>
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="nama@email.com"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Masukkan password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleLogin}
-        disabled={loading}
+      {/* ================= MODAL BOTTOM SHEET ================= */}
+      <Modal
+        visible={isSheetVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsSheetVisible(false)}
       >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.buttonText}>Login</Text>
-        )}
-      </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity style={styles.dismissArea} onPress={() => setIsSheetVisible(false)} />
 
-      <View style={styles.registerRow}>
-        <Text style={styles.registerText}>Belum memiliki akun? </Text>
-        <TouchableOpacity onPress={() => router.push("/register")}>
-          <Text style={styles.registerLink}>Daftar sekarang</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.bottomSheetContainer}>
+            <View style={styles.bottomSheet}>
+              <View style={styles.sheetHandle} />
+
+              <Text style={styles.sheetTitle}>Masuk ke WangKu</Text>
+              <Text style={styles.sheetSubtitle}>Gunakan akun terdaftar Anda untuk mengelola saldo</Text>
+
+              {/* INPUT EMAIL */}
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="nama@email.com"
+                placeholderTextColor="#94A3B8"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+
+              {/* INPUT PASSWORD */}
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Masukkan password"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton} 
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "🙈"}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* TOMBOL SUBMIT */}
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.buttonText}>Login</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.registerRow}>
+                <Text style={styles.registerText}>Belum memiliki akun? </Text>
+                <TouchableOpacity onPress={() => { setIsSheetVisible(false); router.push("/register"); }}>
+                  <Text style={styles.registerLink}>Daftar sekarang</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -91,54 +169,174 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    backgroundColor: "#F6FAF8",
-    padding: 24,
-  },
-  logoBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 8,
-    backgroundColor: "#0B8F6A",
+    backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
   },
-  logo: {
-    color: "#FFFFFF",
-    fontSize: 30,
+  responsiveWrapper: {
+    width: "100%",
+    maxWidth: 420,
+    height: "100%",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+  },
+  warningBanner: {
+    width: "100%",
+    backgroundColor: "#074E5B",
+    borderRadius: 16,
+    padding: 16,
+  },
+  warningTitle: {
+    color: "#F59E0B",
     fontWeight: "800",
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  warningText: {
+    color: "#E2E8F0",
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  centerContent: {
+    alignItems: "center",
+    width: "100%",
+  },
+  logoImageReal: {
+    width: 160, // Diperbesar biar penuh & pas
+    height: 160,
+    marginBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#10231D",
+    fontSize: 34,
+    fontWeight: "900",
+    color: "#1E293B",
+    letterSpacing: -0.5,
+  },
+  titleAccent: {
+    color: "#10B981", // Disesuaikan dengan warna hijau toska logo asli
   },
   subtitle: {
-    marginTop: 6,
-    marginBottom: 28,
-    color: "#60716B",
+    marginTop: 8,
+    color: "#64748B",
     fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  actionArea: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  openSheetButton: {
+    width: "100%",
+    backgroundColor: "#0EA5E9", // Warna biru toska cerah sesuai logo
+    borderRadius: 25,
+    paddingVertical: 14,
+    alignItems: "center",
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  openSheetButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  versionText: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.4)",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  dismissArea: {
+    flex: 1,
+    width: "100%",
+  },
+  bottomSheetContainer: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "transparent",
+  },
+  bottomSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 5,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 3,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F172A",
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 4,
+    marginBottom: 24,
   },
   label: {
-    marginBottom: 7,
-    color: "#243B33",
+    marginBottom: 6,
+    color: "#475569",
     fontWeight: "700",
+    fontSize: 13,
+    marginLeft: 2,
   },
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#D7E3DD",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     marginBottom: 16,
-    fontSize: 16,
+    fontSize: 15,
+    color: "#0F172A",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#0F172A",
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   button: {
-    marginTop: 6,
-    backgroundColor: "#0B8F6A",
-    borderRadius: 8,
+    marginTop: 10,
+    backgroundColor: "#10B981",
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
@@ -148,18 +346,20 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   registerRow: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 22,
+    marginTop: 20,
   },
   registerText: {
-    color: "#60716B",
+    color: "#64748B",
+    fontSize: 13,
   },
   registerLink: {
-    color: "#0B8F6A",
+    color: "#0EA5E9",
     fontWeight: "700",
+    fontSize: 13,
   },
 });

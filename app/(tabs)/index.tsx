@@ -1,14 +1,14 @@
-import React, { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { auth, db } from "../../firebase/firebaseConfig";
 import { UserProfile, WalletTransaction } from "../../types";
 import { formatRupiah } from "../../utils/format";
