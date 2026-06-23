@@ -1,18 +1,18 @@
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { auth, db } from "../firebase/firebaseConfig";
-import { WalletTransaction } from "../types";
+import { auth, db } from "../../firebase/firebaseConfig";
+import { WalletTransaction } from "../../types";
 
 type TransactionItem = WalletTransaction & {
   id: string;
