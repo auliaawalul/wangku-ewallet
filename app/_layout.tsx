@@ -9,6 +9,10 @@ export default function RootLayout() {
       <Stack.Screen name="pay" />
       <Stack.Screen name="topup" />
       <Stack.Screen name="history" />
+      <Stack.Screen name="me" />
+      <Stack.Screen name="profile-security" />
+      <Stack.Screen name="trends" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }
