@@ -114,7 +114,7 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Saldo PayKu</Text>
+        <Text style={styles.balanceLabel}>Saldo WangKu</Text>
         <Text style={styles.balanceValue}>{formatRupiah(balance)}</Text>
         <Text style={styles.balanceHint}>Saldo aktif dan siap digunakan</Text>
       </View>

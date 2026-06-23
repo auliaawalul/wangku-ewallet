@@ -52,7 +52,7 @@ export default function RegisterScreen() {
         createdAt: serverTimestamp(),
       });
 
-      Alert.alert("Berhasil", "Akun PayKu berhasil dibuat");
+      Alert.alert("Berhasil", "Akun WangKu berhasil dibuat");
       router.replace("/");
 } catch (error: any) {
   console.log("REGISTER ERROR CODE:", error.code);
@@ -69,7 +69,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Buat akun PayKu</Text>
+      <Text style={styles.title}>Buat akun WangKu</Text>
       <Text style={styles.subtitle}>Isi data berikut untuk membuat dompet digital</Text>
 
       <TextInput

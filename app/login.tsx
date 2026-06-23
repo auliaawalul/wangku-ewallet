@@ -44,7 +44,7 @@ export default function LoginScreen() {
       <View style={styles.logoBox}>
         <Text style={styles.logo}>P</Text>
       </View>
-      <Text style={styles.title}>Masuk ke PayKu</Text>
+      <Text style={styles.title}>Masuk ke WangKu</Text>
       <Text style={styles.subtitle}>Kelola saldo dan transaksi dalam satu aplikasi</Text>
 
       <Text style={styles.label}>Email</Text>

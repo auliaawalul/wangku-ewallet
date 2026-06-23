@@ -15,7 +15,7 @@ import { auth, db } from "../firebase/firebaseConfig";
 import { getDigitalProducts } from "../services/productApi";
 import { Product } from "../types";
 
-const rupiahRate = 16000;
+const rupiahRate = 17000;
 
 export default function PayScreen() {
   const [products, setProducts] = useState<Product[]>([]);
