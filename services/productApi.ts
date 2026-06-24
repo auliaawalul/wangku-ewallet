@@ -1,4 +1,3 @@
-import axios from "axios";
 
 export type DigitalProduct = {
   id: number;
@@ -10,12 +9,18 @@ export type DigitalProduct = {
   category: string;
 };
 
-const API_BASE_URL = "http://192.168.18.53:3001";
+// Ganti dengan IP Address laptop kamu yang didapat dari langkah ke-2
+const BASE_URL = "http://10.204.95.179:3000"; 
 
 export const getDigitalProducts = async () => {
-  const response = await axios.get<DigitalProduct[]>(
-    `${API_BASE_URL}/digitalProducts`
-  );
-
-  return response.data;
+  try {
+    const response = await fetch(`${BASE_URL}/products`);
+    if (!response.ok) {
+      throw new Error("Respon server bermasalah");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("API ERROR:", error);
+    throw error;
+  }
 };

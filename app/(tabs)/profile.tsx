@@ -1,7 +1,7 @@
 import React from 'react';
-// Mengimpor langsung isi halaman keamanan yang sudah kamu buat sebelumnya
-import ProfileSecurityScreen from '../profile-security';
+// Mengimpor langsung isi halaman akun saya (me.tsx) yang ada di folder luar
+import MeScreen from '../me';
 
 export default function ProfileTab() {
-  return <ProfileSecurityScreen />;
+  return <MeScreen />;
 }
