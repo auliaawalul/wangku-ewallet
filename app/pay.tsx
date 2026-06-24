@@ -28,17 +28,20 @@ export default function PayScreen() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState(""); 
 
-  const fetchProducts = async () => {
+ const fetchProducts = async () => {
     try {
       setLoading(true);
       setError("");
       
-      const data = (await getDigitalProducts()) as any;
+      const data = await getDigitalProducts();
       
+      // 👈 DIUBAH: Memastikan data yang dimasukkan ke state adalah Array yang valid
       if (Array.isArray(data)) {
-        setProducts(data.slice(0, 10));
-      } else {
         setProducts(data);
+      } else if (data && Array.isArray((data as any).digitalProducts)) {
+        setProducts((data as any).digitalProducts);
+      } else {
+        setProducts([]);
       }
     } catch (err: any) {
       console.log("FETCH PRODUCT ERROR:", err.message);
