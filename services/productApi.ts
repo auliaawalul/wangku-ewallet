@@ -10,7 +10,7 @@ export type DigitalProduct = {
   category: string;
 };
 
-const API_BASE_URL = "http://192.168.68.206";
+const API_BASE_URL = "http://192.168.18.53:3001";
 
 export const getDigitalProducts = async () => {
   const response = await axios.get<DigitalProduct[]>(

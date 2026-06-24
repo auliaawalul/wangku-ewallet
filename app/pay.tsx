@@ -13,18 +13,45 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import React, { useEffect, useState } from "react";
+
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
+
+import {
+  collection,
+  doc,
+  getDoc,
+  runTransaction,
+  serverTimestamp,
+} from "firebase/firestore";
+
 import { auth, db } from "../firebase/firebaseConfig";
-import { getDigitalProducts } from "../services/productApi";
-import { DigitalProduct, UserProfile } from "../types";
+import {
+  DigitalProduct,
+  getDigitalProducts,
+} from "../services/productApi";
 import { formatRupiah } from "../utils/format";
-import { hashPin } from "../utils/security";
+import { verifyPin } from "../utils/security";
 
 export default function PayScreen() {
   const [products, setProducts] = useState<DigitalProduct[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<DigitalProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<DigitalProduct | null>(null);
+
+  const [customerNumber, setCustomerNumber] = useState("");
   const [pin, setPin] = useState("");
+
+  const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
 
  const fetchProducts = async () => {
@@ -36,28 +63,46 @@ export default function PayScreen() {
       setProducts(data.slice(0, 10));
     } catch (err) {
       setError("Data produk digital gagal dimuat. Periksa koneksi internet atau URL API.");
+
+      const data = await getDigitalProducts();
+
+      setProducts(data);
+    } catch (error: any) {
+      console.log("FETCH PRODUCT ERROR:", error.message);
+
+      Alert.alert(
+        "Gagal mengambil produk",
+        "Pastikan JSON Server sudah berjalan dan URL API sudah benar."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const openPinModal = (product: DigitalProduct) => {
-    setSelectedProduct(product);
-    setPin("");
-  };
-
-  const processPayment = async () => {
+  const handlePayment = async () => {
     try {
       const user = auth.currentUser;
-      const product = selectedProduct;
 
-      if (!user || !product) {
-        Alert.alert("Gagal", "Data pengguna atau produk tidak ditemukan");
+      if (!user) {
+        Alert.alert("Error", "User belum login");
         return;
       }
 
-      if (pin.length !== 6) {
-        Alert.alert("Peringatan", "Masukkan PIN transaksi 6 digit");
+      if (!selectedProduct) {
+        Alert.alert("Peringatan", "Pilih produk terlebih dahulu");
+        return;
+      }
+
+      if (customerNumber.trim() === "") {
+        Alert.alert(
+          "Peringatan",
+          "Nomor tujuan / ID pelanggan harus diisi"
+        );
+        return;
+      }
+
+      if (pin.trim() === "") {
+        Alert.alert("Peringatan", "PIN transaksi harus diisi");
         return;
       }
 
@@ -67,153 +112,289 @@ export default function PayScreen() {
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
-        Alert.alert("Gagal", "Profil pengguna tidak ditemukan");
+        Alert.alert("Error", "Data pengguna tidak ditemukan");
         return;
       }
 
-      const userProfile = userSnap.data() as UserProfile;
+      const userData = userSnap.data();
 
-      if (!userProfile.transactionPinHash) {
+      if (!userData.pinHash) {
         Alert.alert(
           "PIN belum dibuat",
-          "Silakan buat PIN transaksi di menu Saya > Profil dan Keamanan Akun"
+          "Silakan buat PIN transaksi terlebih dahulu di menu Saya."
         );
-        router.push("/profile-security");
         return;
       }
 
-      const inputPinHash = await hashPin(pin);
+      const isPinValid = await verifyPin(pin, userData.pinHash);
 
-      if (inputPinHash !== userProfile.transactionPinHash) {
-        Alert.alert("PIN salah", "Pembayaran dibatalkan karena PIN tidak sesuai");
+      if (!isPinValid) {
+        Alert.alert(
+          "PIN salah",
+          "PIN transaksi yang kamu masukkan tidak sesuai."
+        );
+        return;
+      }
+
+      if (userData.balance < selectedProduct.price) {
+        Alert.alert(
+          "Saldo tidak cukup",
+          "Silakan lakukan top up saldo terlebih dahulu."
+        );
         return;
       }
 
       await runTransaction(db, async (transaction) => {
         const freshUserSnap = await transaction.get(userRef);
-        const balance = freshUserSnap.data()?.balance || 0;
 
-        if (balance < product.price) {
+        if (!freshUserSnap.exists()) {
+          throw new Error("Data pengguna tidak ditemukan");
+        }
+
+        const freshUserData = freshUserSnap.data();
+        const currentBalance = freshUserData.balance || 0;
+
+        if (currentBalance < selectedProduct.price) {
           throw new Error("Saldo tidak cukup");
         }
 
+        const newBalance = currentBalance - selectedProduct.price;
+
         transaction.update(userRef, {
-          balance: balance - product.price,
+          balance: newBalance,
         });
 
-        const trxRef = doc(collection(db, "transactions"));
-        transaction.set(trxRef, {
+        const transactionRef = doc(collection(db, "transactions"));
+
+        transaction.set(transactionRef, {
           uid: user.uid,
           type: "payment",
-          title: `Pembayaran ${product.name}`,
-          category: product.category,
-          provider: product.provider,
-          amount: product.price,
+          title: selectedProduct.name,
+          category: selectedProduct.category,
+          provider: selectedProduct.provider,
+          productType: selectedProduct.type,
+          targetNumber: customerNumber.trim(),
+          amount: selectedProduct.price,
           status: "success",
           createdAt: serverTimestamp(),
         });
       });
 
-      Alert.alert("Berhasil", "Pembayaran produk digital berhasil");
+      Alert.alert(
+        "Pembayaran berhasil",
+        `${selectedProduct.name} berhasil dibayar sebesar ${formatRupiah(
+          selectedProduct.price
+        )}`
+      );
+
       setSelectedProduct(null);
+      setCustomerNumber("");
       setPin("");
     } catch (error: any) {
-      Alert.alert("Pembayaran gagal", error.message || "Transaksi tidak dapat diproses");
+      console.log("PAYMENT ERROR:", error.message);
+
+      Alert.alert(
+        "Pembayaran gagal",
+        error.message || "Terjadi kesalahan saat pembayaran"
+      );
     } finally {
       setPaying(false);
     }
   };
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Produk Digital</Text>
-      <Text style={styles.subtitle}>Pulsa, paket data, tagihan, dan top up e-money</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Bayar Produk Digital</Text>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={fetchProducts}>
-        <Text style={styles.primaryButtonText}>Load Produk Digital API</Text>
-      </TouchableOpacity>
+      <Text style={styles.subtitle}>
+        Pilih produk digital dari API JSON Server
+      </Text>
 
-      {loading && <ActivityIndicator size="large" color="#0B8F6A" style={styles.loading} />}
-      {error !== "" && <Text style={styles.error}>{error}</Text>}
-      {!loading && products.length === 0 && <Text style={styles.empty}>Data tidak tersedia</Text>}
-
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={{ uri: item.iconUrl }} style={styles.image} />
-            <View style={styles.cardBody}>
-              <Text style={styles.productTitle}>{item.name}</Text>
-              <Text style={styles.category}>{item.category} - {item.provider}</Text>
-              <Text style={styles.price}>{formatRupiah(item.price)}</Text>
-              <Text style={styles.desc}>{item.description}</Text>
-              <TouchableOpacity style={styles.payButton} onPress={() => openPinModal(item)}>
-                <Text style={styles.payButtonText}>Bayar Pakai PIN</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+      <Button
+        title="Load Ulang Produk"
+        onPress={fetchProducts}
       />
 
-      <TouchableOpacity onPress={() => router.back()}>
-        <Text style={styles.back}>Kembali</Text>
-      </TouchableOpacity>
+      <View style={styles.divider} />
 
-      <Modal visible={!!selectedProduct} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Konfirmasi Pembayaran</Text>
-            <Text style={styles.modalProduct}>{selectedProduct?.name}</Text>
-            <Text style={styles.modalPrice}>{formatRupiah(selectedProduct?.price || 0)}</Text>
-            <TextInput
-              style={styles.pinInput}
-              placeholder="Masukkan PIN 6 digit"
-              keyboardType="numeric"
-              secureTextEntry
-              maxLength={6}
-              value={pin}
-              onChangeText={setPin}
-            />
-            <TouchableOpacity style={styles.primaryButton} onPress={processPayment} disabled={paying}>
-              <Text style={styles.primaryButtonText}>{paying ? "Memproses..." : "Bayar Sekarang"}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setSelectedProduct(null)}>
-              <Text style={styles.cancelText}>Batal</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : products.length === 0 ? (
+        <Text style={styles.emptyText}>
+          Data produk tidak tersedia
+        </Text>
+      ) : (
+        products.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[
+              styles.card,
+              selectedProduct?.id === item.id &&
+                styles.selectedCard,
+            ]}
+            onPress={() => setSelectedProduct(item)}
+          >
+            <Text style={styles.productName}>
+              {item.name}
+            </Text>
+
+            <Text style={styles.productInfo}>
+              Provider: {item.provider}
+            </Text>
+
+            <Text style={styles.productInfo}>
+              Kategori: {item.category}
+            </Text>
+
+            <Text style={styles.productDesc}>
+              {item.description}
+            </Text>
+
+            <Text style={styles.price}>
+              {formatRupiah(item.price)}
+            </Text>
+          </TouchableOpacity>
+        ))
+      )}
+
+      <View style={styles.divider} />
+
+      <Text style={styles.subtitle}>
+        Detail Pembayaran
+      </Text>
+
+      <Text style={styles.label}>
+        Produk Dipilih
+      </Text>
+
+      <Text style={styles.selectedText}>
+        {selectedProduct
+          ? selectedProduct.name
+          : "Belum ada produk dipilih"}
+      </Text>
+
+      <TextInput
+        placeholder="Masukkan nomor HP / ID pelanggan"
+        value={customerNumber}
+        onChangeText={setCustomerNumber}
+        style={styles.input}
+        keyboardType="number-pad"
+      />
+
+      <TextInput
+        placeholder="Masukkan PIN transaksi"
+        value={pin}
+        onChangeText={setPin}
+        style={styles.input}
+        keyboardType="number-pad"
+        secureTextEntry
+        maxLength={6}
+      />
+
+      <Button
+        title={paying ? "Memproses..." : "Bayar Sekarang"}
+        onPress={handlePayment}
+        disabled={paying}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F6FAF8", padding: 20, paddingTop: 52 },
-  title: { fontSize: 26, fontWeight: "900", color: "#10231D" },
-  subtitle: { marginTop: 6, fontSize: 14, color: "#5B6B65" },
-  primaryButton: { marginTop: 18, backgroundColor: "#0B8F6A", paddingVertical: 14, borderRadius: 12, alignItems: "center" },
-  primaryButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 15 },
-  loading: { marginTop: 18 },
-  error: { color: "#C23B3B", marginTop: 14 },
-  empty: { marginTop: 16, color: "#60716B" },
-  list: { paddingVertical: 16 },
-  card: { flexDirection: "row", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#E2EAE6" },
-  image: { width: 62, height: 62, borderRadius: 14, backgroundColor: "#EEF4F1" },
-  cardBody: { flex: 1, marginLeft: 12 },
-  productTitle: { fontSize: 15, fontWeight: "900", color: "#10231D" },
-  category: { marginTop: 3, fontSize: 12, color: "#5B6B65" },
-  price: { marginTop: 5, fontSize: 16, fontWeight: "900", color: "#0B8F6A" },
-  desc: { marginTop: 4, fontSize: 12, color: "#5B6B65" },
-  payButton: { marginTop: 10, alignSelf: "flex-start", backgroundColor: "#E8F7F1", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  payButtonText: { color: "#0B8F6A", fontWeight: "800" },
-  back: { textAlign: "center", paddingVertical: 12, color: "#0B8F6A", fontWeight: "800" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
-  modalBox: { backgroundColor: "#FFFFFF", padding: 22, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  modalTitle: { fontSize: 20, fontWeight: "900", color: "#10231D" },
-  modalProduct: { marginTop: 10, color: "#10231D", fontWeight: "700" },
-  modalPrice: { marginTop: 6, color: "#0B8F6A", fontSize: 22, fontWeight: "900" },
-  pinInput: { backgroundColor: "#F6FAF8", borderWidth: 1, borderColor: "#D7E3DD", borderRadius: 12, padding: 14, marginTop: 16, textAlign: "center", fontSize: 18, letterSpacing: 4 },
-  cancelText: { textAlign: "center", color: "#C23B3B", fontWeight: "800", marginTop: 14 },
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#f8fafc",
+  },
+
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 6,
+    color: "#111827",
+  },
+
+  subtitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: "#374151",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    marginVertical: 18,
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+
+  card: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+
+  selectedCard: {
+    borderColor: "#2563eb",
+    backgroundColor: "#eff6ff",
+  },
+
+  productName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 4,
+  },
+
+  productInfo: {
+    fontSize: 13,
+    color: "#4b5563",
+    marginBottom: 2,
+  },
+
+  productDesc: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 6,
+    marginBottom: 8,
+  },
+
+  price: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#16a34a",
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: "#374151",
+  },
+
+  selectedText: {
+    fontSize: 14,
+    color: "#111827",
+    marginBottom: 12,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#ffffff",
+  },
 });
