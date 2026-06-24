@@ -3,5 +3,5 @@ export const formatRupiah = (value: number) => {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-  }).format(value || 0);
+  }).format(value);
 };
