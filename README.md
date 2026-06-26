@@ -1,4 +1,4 @@
-# Aplikasi Mobile E-Wallet Berbasis Expo, Axios, dan Firebase
+# Aplikasi Mobile WangKu E-Wallet Berbasis Expo, Axios, dan Firebase
 ## 1. Identitas Aplikasi
 Nama aplikasi: WangKu
 Jenis aplikasi: E-Wallet atau dompet digital sederhana
@@ -175,8 +175,8 @@ sebelum melakukan pembayaran produk digital.
 ## 8. Pembagian Tugas Tim Skenario B
 | Anggota | Peran | Tugas | Tanggung Jawab Demo |
 |---|---|---|---|
-| Anggota 1 | Frontend & Axios Specialist | Merancang UI/UX, halaman Dashboard, halaman Pay, integrasi Axios ke API produk | Menjelaskan desain UI, state produk, loading, error handling, dan alur API -> Axios -> State -> UI pada 2 fitur |
-| Anggota 2 | Backend, State & Firebase Specialist | Setup Firebase, Authentication, Firestore, state saldo, top up, pembayaran, dan riwayat transaksi | Menjelaskan struktur Firebase, manajemen state lokal, proses simpan data transaksi, update saldo, dan rules database |
+| Anggota 1: Nurlaila Putri R. (0923040063) | Frontend & Axios Specialist | Merancang UI/UX, halaman Dashboard, halaman Pay, integrasi Axios ke API produk | Menjelaskan desain UI, state produk, loading, error handling, dan alur API -> Axios -> State -> UI pada 2 fitur |
+| Anggota 2: Aulia Awalul Rizky T.A. (0923040062) | Backend, State & Firebase Specialist | Setup Firebase, Authentication, Firestore, state saldo, top up, pembayaran, dan riwayat transaksi | Menjelaskan struktur Firebase, manajemen state lokal, proses simpan data transaksi, update saldo, dan rules database |
 
 ## 9. Struktur Folder Project
 ```txt
@@ -314,7 +314,7 @@ Error handling yang perlu ada:
 4. Jika user belum login, tampilkan "Silakan login terlebih dahulu".
 5. Jika nominal top up kurang dari Rp10.000, tampilkan peringatan.
 
-## 14. Penjelasan Singkat untuk README
+## 14. Penjelasan Singkat Project
 WangKu adalah aplikasi mobile e-wallet berbasis React Native Expo yang mengintegrasikan
 Axios dan Firebase. Axios digunakan untuk mengambil data produk digital dari API publik,
 sedangkan Firebase digunakan untuk autentikasi pengguna dan penyimpanan data saldo serta
