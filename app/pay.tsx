@@ -1,3 +1,18 @@
+import { router } from "expo-router";
+import { collection, doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import React, { useEffect, useState } from "react";
 
 import {
@@ -39,9 +54,15 @@ export default function PayScreen() {
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
 
-  const fetchProducts = async () => {
+ const fetchProducts = async () => {
     try {
       setLoading(true);
+      setError("");
+      // TAMBAHKAN 'as any' di ujung fungsi getDigitalProducts() seperti di bawah ini:
+      const data = await getDigitalProducts() as any; 
+      setProducts(data.slice(0, 10));
+    } catch (err) {
+      setError("Data produk digital gagal dimuat. Periksa koneksi internet atau URL API.");
 
       const data = await getDigitalProducts();
 
